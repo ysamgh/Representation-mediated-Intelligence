@@ -77,6 +77,12 @@ def extract_hf_activations(
         ) from exc
 
     tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=False)
+    if tokenizer.pad_token_id is None:
+        if tokenizer.eos_token is None:
+            raise ValueError(
+                "Tokenizer has no pad token or EOS token; configure a padding token explicitly."
+            )
+        tokenizer.pad_token = tokenizer.eos_token
     model = AutoModel.from_pretrained(
         model_name_or_path, output_hidden_states=True, trust_remote_code=False
     )
@@ -93,7 +99,14 @@ def extract_hf_activations(
             )
             encoded = {key: value.to(selected_device) for key, value in encoded.items()}
             output = model(**encoded)
-            hidden = output.hidden_states[layer].detach().float().cpu().numpy()
+            hidden_states = output.hidden_states
+            if hidden_states is None:
+                raise RuntimeError("The selected model did not return hidden states.")
+            if not -len(hidden_states) <= layer < len(hidden_states):
+                raise ValueError(
+                    f"layer={layer} is out of range for {len(hidden_states)} hidden-state tensors."
+                )
+            hidden = hidden_states[layer].detach().float().cpu().numpy()
             mask = encoded["attention_mask"].detach().cpu().numpy()
             batches.append(pool_token_activations(hidden, mask, pooling=pooling))
 
