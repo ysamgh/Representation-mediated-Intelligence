@@ -25,12 +25,48 @@ This is a research hypothesis, not an assumption of universal shared semantics.
 - Not evidence that ordinary hosted model APIs expose compatible hidden states.
 - Not a claim that geometric similarity alone proves semantic equivalence.
 
-## Research anchors
+## Initial implementation
 
-- Cheng et al., **Plato's Key** (Hazy Research, Stanford, 25 Nov 2026): cross-model factual representation transfer using an orthogonal Procrustes rotation and global scale. The report describes 12 base LLMs from eight families. Reported results are summarized in [the literature review](research/literature-review.md).
-- Achara et al., **Multi-Way Representation Alignment** (ICML 2026): generalized Procrustes shared spaces and Geometry-Corrected Procrustes Alignment; highlights that retrieval agreement and geometry preservation are different objectives.
-- Smith et al., **Functional Alignment Can Mislead** (ICML 2025): warns that successful stitching does not, by itself, establish informational similarity.
-- Maiorca et al., **Latent Space Translation via Semantic Alignment** (NeurIPS 2023): earlier closed-form latent translation across pretrained networks.
+The core package provides a NumPy-only Procrustes engine. Optional Hugging Face support extracts hidden-state activations from open models without changing the core dependency footprint.
+
+### Install
+
+~~~bash
+python -m pip install -e ".[test]"
+python -m pytest
+~~~
+
+Hugging Face support:
+
+~~~bash
+python -m pip install -e ".[huggingface]"
+~~~
+
+### Paired activation alignment
+
+Rows in `source_acts` and `target_acts` must represent corresponding inputs in the same order. Never fit on held-out evaluation examples.
+
+~~~python
+from rmi import extract_hf_activations, fit_procrustes
+
+texts = ["A calibration sentence.", "A second calibration sentence."]
+source_acts = extract_hf_activations("open-model-a", texts, layer=-1, pooling="mean")
+target_acts = extract_hf_activations("open-model-b", texts, layer=-1, pooling="mean")
+
+mapping = fit_procrustes(source_acts, target_acts)
+mapped = mapping.transform(source_acts)
+~~~
+
+This snippet illustrates the API only. It does not establish that the two models' representations are aligned or functionally interchangeable. A valid experiment requires a sufficiently large calibration corpus, fixed model revisions, held-out prompts, and random/shuffled baselines.
+
+### Extraction conventions
+
+- `layer=-1` selects the final hidden-state output; `layer=0` selects embeddings.
+- `pooling="mean"` averages non-padding token vectors.
+- `pooling="cls"` uses the first token and requires it to be unmasked.
+- `pooling="last_token"` selects the final non-padding token, including with left padding.
+- Custom Hugging Face remote code is disabled (`trust_remote_code=False`).
+- Extraction requires model weights and may need substantial RAM/VRAM. CPU fallback is supported but can be slow.
 
 ## Research principles
 
@@ -42,20 +78,6 @@ This is a research hypothesis, not an assumption of universal shared semantics.
 - Do not describe a memory as “stored” solely because a model answers under one prompt and fails under another; use explicit operational criteria.
 - “No retraining” does not mean “no calibration data” or “no compute”.
 
-## Initial implementation: Procrustes engine
-
-A NumPy-only package is implemented under src/rmi. It supports centered orthogonal Procrustes alignment, spread-matching / least-squares / unit scaling, square and rectangular semi-orthogonal maps, rank diagnostics, and explicit input validation.
-
-Install and run:
-
-~~~bash
-python -m pip install -e ".[test]"
-python -m pytest
-python examples/synthetic_recovery.py
-~~~
-
-No GPU, model download, or PyTorch installation is required for EXP-001. See the [Python API and quick start](README.md#quick-start).
-
 ## Documentation
 
 - [Literature review](research/literature-review.md)
@@ -66,11 +88,11 @@ No GPU, model download, or PyTorch installation is required for EXP-001. See the
 
 ## Status
 
-**Phase:** Mathematical engine implementation / synthetic validation  
+**Phase:** Alignment engine and first activation-extraction adapter  
 **Default branch:** `main`  
 **Working branch:** `research/foundation-v0.1`
 
-No empirical result is claimed by this repository until a run is reproducible from its recorded configuration and artifacts.
+No empirical result is claimed until a run is reproducible from its recorded configuration and artifacts.
 
 ## License
 
