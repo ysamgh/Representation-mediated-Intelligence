@@ -42,9 +42,19 @@ This is a research hypothesis, not an assumption of universal shared semantics.
 - Do not describe a memory as “stored” solely because a model answers under one prompt and fails under another; use explicit operational criteria.
 - “No retraining” does not mean “no calibration data” or “no compute”.
 
-## Initial implementation target
+## Initial implementation: Procrustes engine
 
-A reproducible Python package that extracts selected hidden states from open-weight models, fits a centered orthogonal Procrustes map plus a documented scale, injects mapped activations at controlled layers, evaluates factual transfer and negative controls, and exports machine-readable results.
+A NumPy-only package is implemented under src/rmi. It supports centered orthogonal Procrustes alignment, spread-matching / least-squares / unit scaling, square and rectangular semi-orthogonal maps, rank diagnostics, and explicit input validation.
+
+Install and run:
+
+~~~bash
+python -m pip install -e ".[test]"
+python -m pytest
+python examples/synthetic_recovery.py
+~~~
+
+No GPU, model download, or PyTorch installation is required for EXP-001. See the [Python API and quick start](README.md#quick-start).
 
 ## Documentation
 
@@ -56,7 +66,7 @@ A reproducible Python package that extracts selected hidden states from open-wei
 
 ## Status
 
-**Phase:** Research foundation / pre-implementation  
+**Phase:** Mathematical engine implementation / synthetic validation  
 **Default branch:** `main`  
 **Working branch:** `research/foundation-v0.1`
 
